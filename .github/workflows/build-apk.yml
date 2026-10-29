@@ -7,14 +7,13 @@ jobs:
   build:
     runs-on: ubuntu-22.04
     env:
-      # تحجيم سرعة الترجمة لتقليل الضغط المفاجئ على الرامات والمعالج
       MAKEFLAGS: "-j2"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # إنشاء مساحة Swap إضافية باسم مختلف لتجنب تعارض الملفات
-      - name: Add Swap Space (Prevent Memory Crash)
+      # إضافة مساحة 8 جيجا لتجنب انهيار الرامات
+      - name: Add Swap Space
         run: |
           sudo fallocate -l 8G /swapfile-extra || sudo dd if=/dev/zero of=/swapfile-extra bs=1M count=8192
           sudo chmod 600 /swapfile-extra
@@ -22,7 +21,7 @@ jobs:
           sudo swapon /swapfile-extra
           free -h
 
-      # استخدام إصدار بايثون مستقر
+      # استخدام بايثون 3.11 المستقر
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -39,10 +38,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libltdl-dev libffi-dev libssl-dev python3-dev zip unzip autoconf libtool pkg-config zlib1g-dev cmake ninja-build
 
+      # تثبيت الأدوات وترك pip يختار أحدث إصدار متوافق من Cython تلقائياً
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
-          pip install buildozer "Cython==0.29.33" virtualenv
+          pip install buildozer cython virtualenv
 
       - name: Configure buildozer.spec
         run: |
@@ -53,9 +53,6 @@ jobs:
             sed -i 's/package.name = myapp/package.name = pythonapp/g' buildozer.spec
             sed -i 's/package.domain = org.test/package.domain = com.craft.pythonapp/g' buildozer.spec
           fi
-          
-          # ترك إصدار بايثون الافتراضي الداخلي لتجنب التعارض
-          sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.3.0/g' buildozer.spec || true
           
           # إجبار الأداة على الموافقة التلقائية على التراخيص
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
