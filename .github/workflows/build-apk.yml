@@ -13,19 +13,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # الحل السحري: إضافة 8 جيجا رامات افتراضية لمنع انهيار السيرفر (OOM Kill)
+      # إنشاء مساحة Swap إضافية باسم مختلف لتجنب تعارض الملفات
       - name: Add Swap Space (Prevent Memory Crash)
         run: |
-          sudo fallocate -l 8G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+          sudo fallocate -l 8G /swapfile-extra || sudo dd if=/dev/zero of=/swapfile-extra bs=1M count=8192
+          sudo chmod 600 /swapfile-extra
+          sudo mkswap /swapfile-extra
+          sudo swapon /swapfile-extra
           free -h
 
+      # استخدام إصدار بايثون مستقر
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.14'
+          python-version: '3.11'
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -41,7 +42,7 @@ jobs:
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
-          pip install buildozer cython virtualenv
+          pip install buildozer "Cython==0.29.33" virtualenv
 
       - name: Configure buildozer.spec
         run: |
@@ -53,7 +54,10 @@ jobs:
             sed -i 's/package.domain = org.test/package.domain = com.craft.pythonapp/g' buildozer.spec
           fi
           
-          # إجبار الأداة على الموافقة التلقائية على تراخيص الأندرويد
+          # ترك إصدار بايثون الافتراضي الداخلي لتجنب التعارض
+          sed -i 's/requirements = python3,kivy/requirements = python3,kivy==2.3.0/g' buildozer.spec || true
+          
+          # إجبار الأداة على الموافقة التلقائية على التراخيص
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           sed -i 's/android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           
