@@ -21,13 +21,11 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      # إضافة أدوات C++ و CMake لمنع توقف البناء الصامت
       - name: Install System Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential libltdl-dev libffi-dev libssl-dev python3-dev zip unzip autoconf libtool pkg-config zlib1g-dev cmake ninja-build
 
-      # تثبيت الإصدار الذهبي من Cython
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
@@ -43,11 +41,14 @@ jobs:
             sed -i 's/package.domain = org.test/package.domain = com.craft.pythonapp/g' buildozer.spec
           fi
           
+          # الحل الجذري لمشكلة بايثون 3.14.2: إجبار الأداة على إصدارات مستقرة
+          sed -i 's/requirements = python3,kivy/requirements = python3==3.11.5,kivy==2.3.0/g' buildozer.spec || true
+          
           # إجبار الأداة على الموافقة التلقائية على التراخيص
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           sed -i 's/android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           
-          # رفع مستوى تفاصيل الأخطاء لمنع الإخفاء
+          # رفع مستوى تفاصيل الأخطاء
           sed -i 's/log_level = 1/log_level = 2/g' buildozer.spec || true
           sed -i 's/log_level = 0/log_level = 2/g' buildozer.spec || true
 
@@ -55,7 +56,6 @@ jobs:
         run: |
           buildozer android debug
 
-      # استخراج الـ APK حتى لو حدثت أخطاء جزئية
       - name: Upload APK File
         uses: actions/upload-artifact@v4
         if: always()
