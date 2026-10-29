@@ -10,11 +10,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # توحيد إصدار بايثون في بيئة السيرفر لمنع التعارض
+      # ترقية بيئة السيرفر إلى بايثون 3.14 لتتطابق تلقائياً مع متطلبات الأندرويد
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Setup Java
         uses: actions/setup-java@v5
@@ -27,10 +27,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libltdl-dev libffi-dev libssl-dev python3-dev zip unzip autoconf libtool pkg-config zlib1g-dev cmake ninja-build
 
+      # تثبيت أحدث إصدار متوافق من Cython
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
-          pip install buildozer "Cython==0.29.33" virtualenv
+          pip install buildozer cython virtualenv
 
       - name: Configure buildozer.spec
         run: |
@@ -42,14 +43,11 @@ jobs:
             sed -i 's/package.domain = org.test/package.domain = com.craft.pythonapp/g' buildozer.spec
           fi
           
-          # توحيد إصدارات Kivy وبايثون لتطابق بيئة السيرفر
-          sed -i 's/requirements = python3,kivy/requirements = python3==3.11,kivy==2.3.0/g' buildozer.spec || true
-          
-          # إجبار الأداة على الموافقة التلقائية على التراخيص
+          # إجبار الأداة على الموافقة التلقائية على تراخيص الأندرويد لتجنب توقف البناء
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           sed -i 's/android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           
-          # رفع مستوى تفاصيل الأخطاء
+          # رفع مستوى تفاصيل الأخطاء لمنع الإخفاء
           sed -i 's/log_level = 1/log_level = 2/g' buildozer.spec || true
           sed -i 's/log_level = 0/log_level = 2/g' buildozer.spec || true
 
