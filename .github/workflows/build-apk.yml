@@ -6,11 +6,22 @@ on:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    env:
+      # تحجيم سرعة الترجمة لتقليل الضغط المفاجئ على الرامات والمعالج
+      MAKEFLAGS: "-j2"
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # ترقية بيئة السيرفر إلى بايثون 3.14 لتتطابق تلقائياً مع متطلبات الأندرويد
+      # الحل السحري: إضافة 8 جيجا رامات افتراضية لمنع انهيار السيرفر (OOM Kill)
+      - name: Add Swap Space (Prevent Memory Crash)
+        run: |
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -27,7 +38,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential libltdl-dev libffi-dev libssl-dev python3-dev zip unzip autoconf libtool pkg-config zlib1g-dev cmake ninja-build
 
-      # تثبيت أحدث إصدار متوافق من Cython
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip
@@ -43,11 +53,11 @@ jobs:
             sed -i 's/package.domain = org.test/package.domain = com.craft.pythonapp/g' buildozer.spec
           fi
           
-          # إجبار الأداة على الموافقة التلقائية على تراخيص الأندرويد لتجنب توقف البناء
+          # إجبار الأداة على الموافقة التلقائية على تراخيص الأندرويد
           sed -i 's/# android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           sed -i 's/android.accept_sdk_license = False/android.accept_sdk_license = True/g' buildozer.spec || true
           
-          # رفع مستوى تفاصيل الأخطاء لمنع الإخفاء
+          # رفع مستوى تفاصيل الأخطاء
           sed -i 's/log_level = 1/log_level = 2/g' buildozer.spec || true
           sed -i 's/log_level = 0/log_level = 2/g' buildozer.spec || true
 
